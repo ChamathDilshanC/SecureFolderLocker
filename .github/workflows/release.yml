@@ -1,0 +1,71 @@
+name: Release
+
+# Push a tag such as v1.0.1 to build the installer and publish a GitHub Release.
+on:
+  push:
+    tags: ['v*']
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 8.0.x
+
+      - name: Resolve version from tag
+        shell: pwsh
+        run: |
+          $version = "${{ github.ref_name }}".TrimStart('v')
+          "VERSION=$version" >> $env:GITHUB_ENV
+
+      - name: Publish (self-contained, single file)
+        shell: pwsh
+        run: |
+          dotnet publish .\SecureFolderLocker.csproj `
+            --configuration Release `
+            --framework net8.0-windows `
+            --runtime win-x64 `
+            --self-contained true `
+            -p:PublishSingleFile=true `
+            -p:IncludeNativeLibrariesForSelfExtract=true `
+            -p:EnableCompressionInSingleFile=true `
+            -p:Version=$env:VERSION `
+            --output .\bin\Release\net8.0-windows\publish
+
+      - name: Install Inno Setup
+        shell: pwsh
+        run: choco install innosetup --yes --no-progress
+
+      - name: Build installer
+        shell: pwsh
+        run: |
+          & "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe" "/DMyAppVersion=$env:VERSION" .\SecureFolderLocker.iss
+          if ($LASTEXITCODE -ne 0) { throw "Inno Setup failed with exit code $LASTEXITCODE" }
+
+      - name: Create checksum
+        shell: pwsh
+        run: |
+          $installer = ".\installer\SecureFolderLockerSetup-$env:VERSION.exe"
+          $hash = (Get-FileHash $installer -Algorithm SHA256).Hash.ToLower()
+          "$hash  $(Split-Path $installer -Leaf)" | Set-Content "$installer.sha256"
+
+      - name: Create GitHub Release
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          $releaseArgs = @(
+            "${{ github.ref_name }}",
+            ".\installer\SecureFolderLockerSetup-$env:VERSION.exe",
+            ".\installer\SecureFolderLockerSetup-$env:VERSION.exe.sha256",
+            "--title", "SecureFolderLocker $env:VERSION",
+            "--generate-notes"
+          )
+          if ($env:VERSION -match '-') { $releaseArgs += "--prerelease" }
+          gh release create @releaseArgs
