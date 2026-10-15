@@ -1,0 +1,331 @@
+<ui:FluentWindow
+    x:Class="SecureFolderLocker.MainWindow"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
+    Title="SecureFolderLocker"
+    Width="1000"
+    Height="680"
+    MinWidth="880"
+    MinHeight="520"
+    ExtendsContentIntoTitleBar="True"
+    WindowBackdropType="Mica"
+    WindowCornerPreference="Round"
+    WindowStartupLocation="CenterScreen">
+    <ui:FluentWindow.Resources>
+        <BooleanToVisibilityConverter x:Key="BooleanToVisibilityConverter" />
+
+        <Style x:Key="FolderRowStyle" TargetType="ListViewItem">
+            <Setter Property="Margin" Value="0,0,0,8" />
+            <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+            <Setter Property="Focusable" Value="False" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="ListViewItem">
+                        <ContentPresenter />
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <!-- The logo glyph is dark navy, so it sits on a light tile to stay visible in dark theme. -->
+        <Style x:Key="LogoTileStyle" TargetType="Border">
+            <Setter Property="Padding" Value="8" />
+            <Setter Property="CornerRadius" Value="14" />
+            <Setter Property="Background" Value="White" />
+            <Setter Property="BorderBrush" Value="{DynamicResource ControlStrokeColorDefaultBrush}" />
+            <Setter Property="BorderThickness" Value="1" />
+        </Style>
+
+        <Style x:Key="StatusPillStyle" TargetType="Border">
+            <Setter Property="Margin" Value="0,0,6,0" />
+            <Setter Property="Padding" Value="8,2" />
+            <Setter Property="CornerRadius" Value="10" />
+            <Setter Property="Background" Value="{DynamicResource ControlFillColorSecondaryBrush}" />
+        </Style>
+    </ui:FluentWindow.Resources>
+
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+        </Grid.RowDefinitions>
+
+        <ui:TitleBar
+            Grid.Row="0"
+            Title="SecureFolderLocker"
+            ShowClose="True"
+            ShowMaximize="True"
+            ShowMinimize="True">
+            <ui:TitleBar.Icon>
+                <ui:ImageIcon Source="/SecureFolderLocker.ico" />
+            </ui:TitleBar.Icon>
+        </ui:TitleBar>
+
+        <Grid Grid.Row="1" Margin="32,8,32,24">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="*" />
+                <RowDefinition Height="Auto" />
+            </Grid.RowDefinitions>
+
+            <!-- Login / master password -->
+            <Grid Grid.Row="0" Visibility="{Binding IsLoginVisible}">
+                <ui:Card
+                    Width="420"
+                    Padding="32"
+                    HorizontalAlignment="Center"
+                    VerticalAlignment="Center">
+                    <StackPanel>
+                        <Border
+                            Width="88"
+                            Height="88"
+                            Margin="0,0,0,16"
+                            Style="{StaticResource LogoTileStyle}">
+                            <Image Source="/LogoMark.png" Stretch="Uniform" />
+                        </Border>
+                        <TextBlock
+                            HorizontalAlignment="Center"
+                            FontSize="22"
+                            FontWeight="SemiBold"
+                            Text="{Binding AuthenticationTitle}" />
+                        <TextBlock
+                            Margin="0,6,0,24"
+                            HorizontalAlignment="Center"
+                            Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                            Text="Your password is stored only as a BCrypt hash."
+                            TextAlignment="Center"
+                            TextWrapping="Wrap" />
+
+                        <ui:PasswordBox
+                            x:Name="PasswordInput"
+                            Icon="{ui:SymbolIcon LockClosed24}"
+                            PasswordChanged="PasswordInput_OnPasswordChanged"
+                            PlaceholderText="Master password" />
+
+                        <ui:PasswordBox
+                            x:Name="ConfirmPasswordInput"
+                            Margin="0,12,0,0"
+                            Icon="{ui:SymbolIcon LockClosed24}"
+                            PasswordChanged="ConfirmPasswordInput_OnPasswordChanged"
+                            PlaceholderText="Confirm password"
+                            Visibility="{Binding IsFirstRunVisible}" />
+
+                        <ui:Button
+                            Margin="0,24,0,0"
+                            HorizontalAlignment="Stretch"
+                            Appearance="Primary"
+                            Command="{Binding AuthenticateCommand}"
+                            Content="{Binding AuthenticationAction}"
+                            Icon="{ui:SymbolIcon LockOpen24}"
+                            IsDefault="True" />
+                    </StackPanel>
+                </ui:Card>
+            </Grid>
+
+            <!-- Dashboard -->
+            <Grid Grid.Row="0" Visibility="{Binding IsDashboardVisible}">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="*" />
+                </Grid.RowDefinitions>
+
+                <Grid Grid.Row="0" Margin="0,0,0,20">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+
+                    <Border
+                        Grid.Column="0"
+                        Width="56"
+                        Height="56"
+                        Margin="0,0,16,0"
+                        Style="{StaticResource LogoTileStyle}">
+                        <Image Source="/LogoMark.png" Stretch="Uniform" />
+                    </Border>
+
+                    <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                        <TextBlock FontSize="26" FontWeight="SemiBold" Text="Protected folders" />
+                        <TextBlock
+                            Margin="0,2,0,0"
+                            Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                            Text="{Binding FolderCountText}" />
+                    </StackPanel>
+
+                    <StackPanel
+                        Grid.Column="2"
+                        VerticalAlignment="Center"
+                        Orientation="Horizontal">
+                        <ui:ToggleSwitch
+                            Margin="0,0,16,0"
+                            VerticalAlignment="Center"
+                            Content="Hide folder"
+                            IsChecked="{Binding HideFolder}" />
+                        <ui:Button
+                            Appearance="Primary"
+                            Command="{Binding SelectFolderCommand}"
+                            Content="Lock New Folder"
+                            Icon="{ui:SymbolIcon FolderAdd24}" />
+                    </StackPanel>
+                </Grid>
+
+                <Border
+                    Grid.Row="1"
+                    Padding="12"
+                    Background="{DynamicResource CardBackgroundFillColorDefaultBrush}"
+                    BorderBrush="{DynamicResource CardStrokeColorDefaultBrush}"
+                    BorderThickness="1"
+                    CornerRadius="8">
+                    <Grid>
+                        <ListView
+                            Background="Transparent"
+                            BorderThickness="0"
+                            ItemContainerStyle="{StaticResource FolderRowStyle}"
+                            ItemsSource="{Binding LockedFolders}"
+                            ScrollViewer.HorizontalScrollBarVisibility="Disabled">
+                            <ListView.ItemTemplate>
+                                <DataTemplate>
+                                    <Border
+                                        Padding="16,12"
+                                        Background="{DynamicResource ControlFillColorDefaultBrush}"
+                                        BorderBrush="{DynamicResource ControlStrokeColorDefaultBrush}"
+                                        BorderThickness="1"
+                                        CornerRadius="8">
+                                        <Grid>
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="Auto" />
+                                                <ColumnDefinition Width="*" />
+                                                <ColumnDefinition Width="Auto" />
+                                            </Grid.ColumnDefinitions>
+
+                                            <ui:SymbolIcon
+                                                Grid.Column="0"
+                                                Margin="0,0,16,0"
+                                                VerticalAlignment="Center"
+                                                FontSize="28"
+                                                Foreground="{DynamicResource TextFillColorPrimaryBrush}"
+                                                Symbol="Folder24" />
+
+                                            <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                                                <StackPanel Orientation="Horizontal">
+                                                    <TextBlock
+                                                        Margin="0,0,10,0"
+                                                        VerticalAlignment="Center"
+                                                        FontSize="15"
+                                                        FontWeight="SemiBold"
+                                                        Foreground="{DynamicResource TextFillColorPrimaryBrush}"
+                                                        Text="{Binding Name}"
+                                                        TextTrimming="CharacterEllipsis" />
+                                                    <Border Style="{StaticResource StatusPillStyle}">
+                                                        <TextBlock FontSize="12" Foreground="{DynamicResource TextFillColorPrimaryBrush}" Text="{Binding StatusText}" />
+                                                    </Border>
+                                                    <Border Style="{StaticResource StatusPillStyle}" Visibility="{Binding IsHidden, Converter={StaticResource BooleanToVisibilityConverter}}">
+                                                        <StackPanel Orientation="Horizontal">
+                                                            <ui:SymbolIcon Margin="0,0,4,0" FontSize="12" Foreground="{DynamicResource TextFillColorPrimaryBrush}" Symbol="EyeOff24" />
+                                                            <TextBlock FontSize="12" Foreground="{DynamicResource TextFillColorPrimaryBrush}" Text="Hidden" />
+                                                        </StackPanel>
+                                                    </Border>
+                                                </StackPanel>
+                                                <TextBlock
+                                                    Margin="0,3,0,0"
+                                                    Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                                                    Text="{Binding Path}"
+                                                    TextTrimming="CharacterEllipsis"
+                                                    ToolTip="{Binding Path}" />
+                                            </StackPanel>
+
+                                            <StackPanel
+                                                Grid.Column="2"
+                                                Margin="16,0,0,0"
+                                                VerticalAlignment="Center"
+                                                Orientation="Horizontal">
+                                                <ui:Button
+                                                    Margin="0,0,8,0"
+                                                    Command="{Binding DataContext.PreviewFolderCommand, RelativeSource={RelativeSource AncestorType=ListView}}"
+                                                    CommandParameter="{Binding}"
+                                                    Content="Preview"
+                                                    Icon="{ui:SymbolIcon Eye24}"
+                                                    ToolTip="Open read-only; re-locks when the Explorer window closes" />
+                                                <ui:Button
+                                                    Margin="0,0,8,0"
+                                                    Command="{Binding DataContext.FullyLockCommand, RelativeSource={RelativeSource AncestorType=ListView}}"
+                                                    CommandParameter="{Binding}"
+                                                    Content="Lock"
+                                                    Icon="{ui:SymbolIcon LockClosed24}"
+                                                    ToolTip="Fully lock this folder" />
+                                                <ui:Button
+                                                    Margin="0,0,8,0"
+                                                    Command="{Binding DataContext.UnlockCommand, RelativeSource={RelativeSource AncestorType=ListView}}"
+                                                    CommandParameter="{Binding}"
+                                                    Content="Unlock"
+                                                    Icon="{ui:SymbolIcon LockOpen24}"
+                                                    ToolTip="Remove protection and stop tracking this folder" />
+                                                <ui:Button
+                                                    Command="{Binding DataContext.ZipFolderCommand, RelativeSource={RelativeSource AncestorType=ListView}}"
+                                                    CommandParameter="{Binding}"
+                                                    Content="Zip &amp; Share"
+                                                    Icon="{ui:SymbolIcon Share24}"
+                                                    ToolTip="Create a password-protected ZIP" />
+                                            </StackPanel>
+                                        </Grid>
+                                    </Border>
+                                </DataTemplate>
+                            </ListView.ItemTemplate>
+                        </ListView>
+
+                        <StackPanel
+                            HorizontalAlignment="Center"
+                            VerticalAlignment="Center"
+                            Visibility="{Binding EmptyStateVisibility}">
+                            <ui:SymbolIcon
+                                HorizontalAlignment="Center"
+                                FontSize="48"
+                                Foreground="{DynamicResource TextFillColorTertiaryBrush}"
+                                Symbol="FolderOpen24" />
+                            <TextBlock
+                                Margin="0,12,0,4"
+                                HorizontalAlignment="Center"
+                                FontSize="16"
+                                FontWeight="SemiBold"
+                                Text="No protected folders yet" />
+                            <TextBlock
+                                HorizontalAlignment="Center"
+                                Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                                Text="Choose &quot;Lock New Folder&quot; to protect your first folder." />
+                        </StackPanel>
+                    </Grid>
+                </Border>
+            </Grid>
+
+            <!-- Status bar -->
+            <Grid Grid.Row="1" Margin="0,16,0,0">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+                <TextBlock
+                    Grid.Column="0"
+                    VerticalAlignment="Center"
+                    Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                    Text="{Binding StatusMessage}"
+                    TextWrapping="Wrap" />
+                <StackPanel
+                    Grid.Column="1"
+                    Margin="16,0,0,0"
+                    VerticalAlignment="Center"
+                    Orientation="Horizontal"
+                    ToolTip="Folder changes need administrator rights. You will be asked to restart elevated when required.">
+                    <ui:SymbolIcon Margin="0,0,6,0" FontSize="16" Symbol="ShieldKeyhole24" />
+                    <TextBlock Text="{Binding AccessModeText}" />
+                </StackPanel>
+            </Grid>
+        </Grid>
+
+        <ContentPresenter
+            x:Name="RootContentDialog"
+            Grid.Row="0"
+            Grid.RowSpan="2"
+            Panel.ZIndex="100" />
+    </Grid>
+</ui:FluentWindow>
