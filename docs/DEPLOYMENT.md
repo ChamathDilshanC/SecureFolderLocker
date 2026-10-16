@@ -31,13 +31,13 @@ The script uses a self-contained `win-x64` publish. Do not package the SQLite da
 Two workflows live in `.github/workflows/`:
 
 - `ci.yml` restores, builds and runs the tests for the whole solution on every push to `main` and on pull requests.
-- `release.yml` runs when a tag matching `v*` is pushed. It restores and runs the tests, publishes the desktop app and `sfl` as self-contained single files, runs a smoke test of the published `sfl.exe` (version matches the tag, `zip`, wrong-password `unzip` returns 3 and extracts nothing, correct `unzip`, no database created), installs Inno Setup with Chocolatey, compiles both installers with `/DMyAppVersion=<tag without v>`, writes a SHA-256 checksum for each, and creates a GitHub Release with `gh release create` containing `SecureFolderLockerSetup-<version>.exe`, `SfLCliSetup-<version>.exe` and their `.sha256` files (release notes generated from commits; tags containing `-`, such as `v1.1.0-beta1`, are marked as pre-releases). The smoke-test commands were run locally against the published exe; the workflow itself has not run on GitHub.
+- `release.yml` runs when a tag matching `v*` is pushed. It restores and runs the tests, publishes the desktop app and `sfl` as self-contained single files, runs a smoke test of the published `sfl.exe` (version matches the tag, `zip`, wrong-password `unzip` returns 3 and extracts nothing, correct `unzip`, no database created), installs Inno Setup with Chocolatey, compiles both installers with `/DMyAppVersion=<tag without v>`, writes a SHA-256 checksum for each, and creates a GitHub Release with `gh release create` (a short description of the two installers and how to verify the checksums, then the generated notes) containing `SecureFolderLockerSetup-<version>.exe`, `SfLCliSetup-<version>.exe` and their `.sha256` files (release notes generated from commits; tags containing `-`, such as `v1.1.0-beta1`, are marked as pre-releases). The smoke-test commands were run locally against the published exe; the workflow itself has not run on GitHub.
 
 To release:
 
 ```powershell
-git tag v1.0.1
-git push origin v1.0.1
+git tag v1.1.0
+git push origin v1.1.0
 ```
 
 The workflow uses only the built-in `GITHUB_TOKEN` with `contents: write`; no secrets need to be configured. The installer is not code-signed, so Windows SmartScreen may warn on first run. The `installer/` folder is git-ignored; installers are distributed only through Releases. This workflow is proposed until it has run successfully on GitHub.
@@ -56,7 +56,7 @@ dotnet publish .\src\Sfl.Cli\Sfl.Cli.csproj `
   -p:EnableCompressionInSingleFile=true `
   --output .\bin\cli-publish
 
-& "$env:LOCALAPPDATA\Programs\Inno Setup 6\ISCC.exe" /DMyAppVersion=1.0.1 .\sfl.iss
+& "$env:LOCALAPPDATA\Programs\Inno Setup 6\ISCC.exe" /DMyAppVersion=1.1.0 .\sfl.iss
 ```
 
 The result is `installer\SfLCliSetup-<version>.exe` (about 31 MB) containing the 35 MB single-file `sfl.exe`; no .NET runtime is needed on the target computer. `IncludeNativeLibrariesForSelfExtract` is required because the SQLite native library is unpacked from inside the file; the first launch after install takes a few seconds while Windows unpacks and scans it (about 5 s measured), later launches about a quarter of a second.

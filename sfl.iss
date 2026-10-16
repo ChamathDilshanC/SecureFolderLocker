@@ -2,7 +2,7 @@
 ; so the desktop app and the CLI can be installed together or separately.
 #define MyAppName "Secure Folder Locker CLI"
 #ifndef MyAppVersion
-  #define MyAppVersion "1.0.1"
+  #define MyAppVersion "1.1.0"
 #endif
 #define MyAppPublisher "ChamathDilshanC"
 #define MyAppExeName "sfl.exe"

@@ -112,13 +112,33 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
+          # Notes that explain the two installers; GitHub's generated notes are added after them.
+          $notes = @"
+          ## Downloads
+
+          | File | What it is |
+          | --- | --- |
+          | ``SecureFolderLockerSetup-$env:VERSION.exe`` | The **desktop app** (Start menu and desktop shortcuts). |
+          | ``SfLCliSetup-$env:VERSION.exe`` | The **``sfl`` command-line tool**, added to your PATH. Open a new terminal and run ``sfl --help``. |
+
+          Each installer has a ``.sha256`` file. To verify one in PowerShell:
+
+          ``````powershell
+          (Get-FileHash .\SfLCliSetup-$env:VERSION.exe -Algorithm SHA256).Hash.ToLower()
+          ``````
+
+          The installers are not code-signed yet, so Windows SmartScreen may warn the first time. Both are self-contained and need no .NET runtime. The CLI guide is in [docs/CLI.md](https://github.com/${{ github.repository }}/blob/${{ github.ref_name }}/docs/CLI.md).
+          "@
+          Set-Content -Path release-notes.md -Value $notes -Encoding UTF8
+
           $releaseArgs = @(
             "${{ github.ref_name }}",
             ".\installer\SecureFolderLockerSetup-$env:VERSION.exe",
             ".\installer\SecureFolderLockerSetup-$env:VERSION.exe.sha256",
             ".\installer\SfLCliSetup-$env:VERSION.exe",
             ".\installer\SfLCliSetup-$env:VERSION.exe.sha256",
-            "--title", "SecureFolderLocker $env:VERSION",
+            "--title", "Secure Folder Locker $env:VERSION (desktop app and sfl CLI)",
+            "--notes-file", "release-notes.md",
             "--generate-notes"
           )
           if ($env:VERSION -match '-') { $releaseArgs += "--prerelease" }
