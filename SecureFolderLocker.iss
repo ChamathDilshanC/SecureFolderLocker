@@ -33,6 +33,12 @@ Source: "{#PublishDir}\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs
 Name: "{autodesktop}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"; WorkingDir: "{app}"
 Name: "{group}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"; WorkingDir: "{app}"
 
+[Registry]
+; Right-click a .zip -> "Extract with Secure Folder Locker" opens the terminal extractor.
+Root: HKLM; Subkey: "Software\Classes\SystemFileAssociations\.zip\shell\SecureFolderLocker.Extract"; ValueType: string; ValueName: ""; ValueData: "Extract with {#MyAppName}"; Flags: uninsdeletekey
+Root: HKLM; Subkey: "Software\Classes\SystemFileAssociations\.zip\shell\SecureFolderLocker.Extract"; ValueType: string; ValueName: "Icon"; ValueData: """{app}\{#MyAppExeName}"""
+Root: HKLM; Subkey: "Software\Classes\SystemFileAssociations\.zip\shell\SecureFolderLocker.Extract\command"; ValueType: string; ValueName: ""; ValueData: """{app}\{#MyAppExeName}"" --extract ""%1"""
+
 [Run]
 Filename: "{app}\{#MyAppExeName}"; Description: "Launch {#MyAppName}"; Flags: shellexec nowait postinstall skipifsilent
 
