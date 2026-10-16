@@ -2,7 +2,7 @@
 
 ## Repository orientation
 
-This is a Windows WPF Folder Locker project. The .NET 8 WPF shell, as-invoker manifest with on-demand administrator elevation, ACL adapter, SQLite database helper, MVVM view model, and WPF-UI dashboard are implemented. Release packaging (Inno Setup and GitHub Actions) is implemented; automated tests remain planned. The intended structure is described in [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
+This is a Windows Folder Locker project with two front ends over one library: the WPF desktop app (repository root) and the `sfl` command-line tool (`src/Sfl.Cli`), both using `src/SecureFolderLocker.Core` (ACL adapter, SQLite database helper, protection service, ZIP services, elevation). The desktop app has an as-invoker manifest with on-demand administrator elevation, MVVM view model and WPF-UI dashboard. Release packaging (two Inno Setup installers and GitHub Actions) is implemented, and xUnit tests live in `tests/SecureFolderLocker.Tests`. The structure is described in [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) and the CLI in [docs/CLI.md](docs/CLI.md).
 
 ## Source of truth
 
@@ -19,15 +19,17 @@ Mark new decisions as proposed until they are implemented and tested. Do not cla
 - Use nullable reference types and explicit types where they improve safety.
 - Keep UI, application services, infrastructure, and persistence concerns separate.
 - Use MVVM and keep code-behind limited to view-specific behavior.
-- Never store plaintext passwords or secrets.
-- Use Windows ACL APIs through a dedicated service, not directly from a view.
+- Put logic that both front ends need in `SecureFolderLocker.Core`, not in the app or the CLI. Do not copy it.
+- Never store plaintext passwords or secrets. The CLI has no password option and must never print a password.
+- Use Windows ACL APIs through a dedicated service, not directly from a view or a command.
+- `sfl unzip` must keep working without a database, a master password or administrator rights.
 - Preserve existing ACL rules and provide a recovery path for failed operations.
 
 ## Validation
 
-Build verification currently uses `dotnet restore .\SecureFolderLocker.csproj` followed by `dotnet build .\SecureFolderLocker.csproj --no-restore`. Tests are not implemented yet.
+Build verification uses `dotnet restore .\SecureFolderLocker.sln`, `dotnet build .\SecureFolderLocker.sln --no-restore` and `dotnet test .\SecureFolderLocker.sln --no-build`. The root project also still builds alone with `dotnet build .\SecureFolderLocker.csproj`.
 
-Expected quality gates are build, tests for password/ACL/database logic, and a manual administrator-mode smoke test on Windows.
+Quality gates are build, the tests (password, ACL, database, ZIP, CLI), and a manual administrator-mode smoke test on Windows. Tests must create their own folders under `%TEMP%`, remove their ACL rule in cleanup, and never lock a drive root, the Windows directory, or a real user path. Do not run manual experiments against the real user database; set `SFL_DATABASE` to a temp file.
 
 ## Change and security rules
 

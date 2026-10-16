@@ -10,7 +10,8 @@ This documentation describes the proposed Secure Folder Locker product. Each ass
 
 - [PRD](PRD.md) - product goals, requirements, scope, and acceptance criteria.
 - [DESIGN_SYSTEM](DESIGN_SYSTEM.md) - WPF visual and interaction rules.
-- [ARCHITECTURE](ARCHITECTURE.md) - proposed system boundaries and data flows.
+- [ARCHITECTURE](ARCHITECTURE.md) - system boundaries, modules and data flows.
+- [CLI](CLI.md) - the `sfl` command-line tool: commands, exit codes, elevation, preview.
 - [SECURITY](SECURITY.md) - threat model and secure behavior.
 - [DATABASE_SCHEMA](DATABASE_SCHEMA.md) - proposed SQLite schema.
 - [DEPLOYMENT](DEPLOYMENT.md) - publish and installer process.
