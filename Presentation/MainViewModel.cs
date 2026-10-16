@@ -13,8 +13,7 @@ namespace SecureFolderLocker.Presentation;
 public sealed class MainViewModel : INotifyPropertyChanged
 {
     private readonly DatabaseHelper _database;
-    private readonly FolderLockService _folderLockService;
-    private readonly ZipExportService _zipExportService;
+    private readonly FolderProtectionService _protection;
     private readonly ElevationService _elevationService;
     private readonly IDialogService _dialogService;
     private string _password = string.Empty;
@@ -27,14 +26,12 @@ public sealed class MainViewModel : INotifyPropertyChanged
 
     public MainViewModel(
         DatabaseHelper database,
-        FolderLockService folderLockService,
-        ZipExportService zipExportService,
+        FolderProtectionService protection,
         ElevationService elevationService,
         IDialogService dialogService)
     {
         _database = database;
-        _folderLockService = folderLockService;
-        _zipExportService = zipExportService;
+        _protection = protection;
         _elevationService = elevationService;
         _dialogService = dialogService;
         LockedFolders = new ObservableCollection<LockedFolder>();
@@ -253,8 +250,7 @@ public sealed class MainViewModel : INotifyPropertyChanged
         {
             IsBusy = true;
             string path = Path.GetFullPath(dialog.SelectedPath);
-            _folderLockService.LockFolder(path, HideFolder);
-            _database.AddLockedFolder(path, HideFolder);
+            _protection.Lock(path, HideFolder);
             RefreshFolders();
             StatusMessage = HideFolder
                 ? "Folder locked and hidden successfully."
@@ -263,6 +259,10 @@ public sealed class MainViewModel : INotifyPropertyChanged
         catch (UnauthorizedAccessException)
         {
             StatusMessage = "Administrator access was denied while changing folder permissions.";
+        }
+        catch (FolderProtectionException exception)
+        {
+            StatusMessage = exception.Message;
         }
         catch (ArgumentException exception)
         {
@@ -288,14 +288,17 @@ public sealed class MainViewModel : INotifyPropertyChanged
         try
         {
             IsBusy = true;
-            _folderLockService.UnlockFolder(folder.Path);
-            _database.RemoveLockedFolder(folder.Path);
+            _protection.Unlock(folder.Path);
             RefreshFolders();
             StatusMessage = "Folder unlocked successfully.";
         }
         catch (UnauthorizedAccessException)
         {
             StatusMessage = "Administrator access was denied while restoring folder permissions.";
+        }
+        catch (FolderProtectionException exception)
+        {
+            StatusMessage = exception.Message;
         }
         catch (ArgumentException exception)
         {
@@ -331,8 +334,7 @@ public sealed class MainViewModel : INotifyPropertyChanged
         try
         {
             IsBusy = true;
-            _folderLockService.PreviewFolder(folder.Path);
-            _database.UpdateFolderMode(folder.Path, isHidden: false, isPreviewMode: true);
+            _protection.Preview(folder.Path);
             RefreshFolders();
             OpenFolderForPreview(folder);
             StatusMessage = "Preview mode enabled. The folder will lock again when its Explorer window closes.";
@@ -340,6 +342,10 @@ public sealed class MainViewModel : INotifyPropertyChanged
         catch (UnauthorizedAccessException)
         {
             StatusMessage = "Administrator access was denied while enabling preview mode.";
+        }
+        catch (FolderProtectionException exception)
+        {
+            StatusMessage = exception.Message;
         }
         catch (ArgumentException exception)
         {
@@ -388,7 +394,11 @@ public sealed class MainViewModel : INotifyPropertyChanged
             return;
         }
 
-        foreach (LockedFolder folder in LockedFolders.Where(f => f.IsPreviewMode).ToList())
+        // A preview opened with the sfl command-line tool is locked by that process's own watcher,
+        // so a live one is left alone. A preview whose watcher died has no lease and is locked here.
+        foreach (LockedFolder folder in LockedFolders
+            .Where(f => f.IsPreviewMode && !PreviewWatchLease.IsActive(_database.DataDirectory, f.Path))
+            .ToList())
         {
             FullyLockFolder(folder);
         }
@@ -404,8 +414,7 @@ public sealed class MainViewModel : INotifyPropertyChanged
         try
         {
             IsBusy = true;
-            _folderLockService.LockFolder(folder.Path, folder.IsHidden);
-            _database.UpdateFolderMode(folder.Path, folder.IsHidden, isPreviewMode: false);
+            _protection.Relock(folder.Path);
             if (_previewMonitors.Remove(folder.Path, out ExplorerPreviewMonitor? monitor))
             {
                 monitor.Dispose();
@@ -416,6 +425,10 @@ public sealed class MainViewModel : INotifyPropertyChanged
         catch (UnauthorizedAccessException)
         {
             StatusMessage = "Administrator access was denied while restoring full lock.";
+        }
+        catch (FolderProtectionException exception)
+        {
+            StatusMessage = exception.Message;
         }
         catch (ArgumentException exception)
         {
@@ -440,8 +453,8 @@ public sealed class MainViewModel : INotifyPropertyChanged
 
         // A fully locked folder denies reads to everyone, so it is opened read-only for the
         // duration of the export and locked again afterwards.
-        bool relockAfterExport = !folder.IsPreviewMode;
-        if (relockAfterExport && !await EnsureAdministratorAsync("export a locked folder"))
+        if (_protection.ExportRequiresAdministrator(folder.Path) &&
+            !await EnsureAdministratorAsync("export a locked folder"))
         {
             return;
         }
@@ -476,17 +489,16 @@ public sealed class MainViewModel : INotifyPropertyChanged
         {
             IsBusy = true;
             StatusMessage = "Creating encrypted ZIP archive...";
-            if (relockAfterExport)
-            {
-                _folderLockService.PreviewFolder(folder.Path);
-            }
-
-            await _zipExportService.ExportToSecureZipAsync(
+            await _protection.ExportAsync(
                 folder.Path,
                 saveDialog.FileName,
                 passwordWindow.ZipPassword);
             created = true;
             StatusMessage = "Encrypted ZIP created successfully.";
+        }
+        catch (FolderProtectionException exception) when (exception.Error == FolderProtectionError.RelockFailed)
+        {
+            StatusMessage = exception.Message;
         }
         catch (OperationCanceledException)
         {
@@ -496,18 +508,12 @@ public sealed class MainViewModel : INotifyPropertyChanged
         {
             StatusMessage = "Access was denied while reading the selected folder or writing the ZIP.";
         }
-        catch (Exception exception) when (exception is FolderLockException or IOException or InvalidDataException or ArgumentException)
+        catch (Exception exception) when (exception is FolderProtectionException or FolderLockException or IOException or InvalidDataException or ArgumentException)
         {
             StatusMessage = "The ZIP archive could not be created. No incomplete archive was kept.";
         }
         finally
         {
-            if (relockAfterExport && !TryRestoreFullLock(folder))
-            {
-                StatusMessage = "The ZIP step finished, but the folder could not be locked again. Use Lock to restore protection.";
-                created = false;
-            }
-
             IsBusy = false;
         }
 
@@ -518,19 +524,6 @@ public sealed class MainViewModel : INotifyPropertyChanged
                 "Secure ZIP",
                 MessageBoxButton.OK,
                 MessageBoxImage.Information);
-        }
-    }
-
-    private bool TryRestoreFullLock(LockedFolder folder)
-    {
-        try
-        {
-            _folderLockService.LockFolder(folder.Path, folder.IsHidden);
-            return true;
-        }
-        catch (Exception exception) when (exception is UnauthorizedAccessException or ArgumentException or FolderLockException)
-        {
-            return false;
         }
     }
 

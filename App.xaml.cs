@@ -10,6 +10,13 @@ public partial class App : System.Windows.Application
     {
         base.OnStartup(e);
 
+        // Terminal mode: `SecureFolderLocker.exe --extract <zip> [--out <dir>]` or a ZIP dropped on the exe.
+        if (ConsoleExtractor.TryParseArguments(e.Args, out string zipPath, out string? outputDirectory))
+        {
+            Shutdown(ConsoleExtractor.Run(zipPath, outputDirectory));
+            return;
+        }
+
         try
         {
             DatabaseHelper database = new();
@@ -21,8 +28,7 @@ public partial class App : System.Windows.Application
             WpfUiDialogService dialogService = new();
             MainViewModel viewModel = new(
                 database,
-                folderLockService,
-                zipExportService,
+                new FolderProtectionService(database, folderLockService, zipExportService),
                 elevationService,
                 dialogService);
             MainWindow mainWindow = new(viewModel, dialogService);

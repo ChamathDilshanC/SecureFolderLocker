@@ -1,0 +1,28 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net8.0-windows</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <AssemblyName>sfl</AssemblyName>
+    <RootNamespace>Sfl.Cli</RootNamespace>
+    <ApplicationManifest>sfl.manifest</ApplicationManifest>
+    <ApplicationIcon>..\..\SecureFolderLocker.ico</ApplicationIcon>
+    <Version>1.0.1</Version>
+    <Product>Secure Folder Locker CLI</Product>
+    <Company>ChamathDilshanC</Company>
+    <IncludeSourceRevisionInInformationalVersion>false</IncludeSourceRevisionInInformationalVersion>
+    <InvariantGlobalization>true</InvariantGlobalization>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Spectre.Console" Version="0.57.2" />
+    <PackageReference Include="Spectre.Console.Cli" Version="0.57.2" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\SecureFolderLocker.Core\SecureFolderLocker.Core.csproj" />
+  </ItemGroup>
+
+</Project>

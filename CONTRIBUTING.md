@@ -2,7 +2,7 @@
 
 ## Prerequisites
 
-The planned application requires Windows, Visual Studio 2022 with the .NET desktop workload, the .NET 8 SDK, and Inno Setup for installer work.
+The application requires Windows, the .NET 8 SDK (Visual Studio 2022 with the .NET desktop workload is optional), and Inno Setup 6 for installer work. Build and test with `dotnet build .\SecureFolderLocker.sln` and `dotnet test .\SecureFolderLocker.sln`. The `sfl` command-line tool is documented in [docs/CLI.md](docs/CLI.md).
 
 ## Workflow
 

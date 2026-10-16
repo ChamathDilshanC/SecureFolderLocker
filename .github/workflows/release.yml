@@ -1,6 +1,7 @@
 name: Release
 
-# Push a tag such as v1.0.1 to build the installer and publish a GitHub Release.
+# Push a tag such as v1.0.1 to build both installers (desktop app and sfl command-line tool)
+# and publish a GitHub Release.
 on:
   push:
     tags: ['v*']
@@ -24,7 +25,13 @@ jobs:
           $version = "${{ github.ref_name }}".TrimStart('v')
           "VERSION=$version" >> $env:GITHUB_ENV
 
-      - name: Publish (self-contained, single file)
+      - name: Restore
+        run: dotnet restore .\SecureFolderLocker.sln
+
+      - name: Test
+        run: dotnet test .\SecureFolderLocker.sln --configuration Release --no-restore
+
+      - name: Publish desktop app (self-contained, single file)
         shell: pwsh
         run: |
           dotnet publish .\SecureFolderLocker.csproj `
@@ -38,22 +45,67 @@ jobs:
             -p:Version=$env:VERSION `
             --output .\bin\Release\net8.0-windows\publish
 
+      - name: Publish sfl command-line tool (self-contained, single file)
+        shell: pwsh
+        run: |
+          dotnet publish .\src\Sfl.Cli\Sfl.Cli.csproj `
+            --configuration Release `
+            --runtime win-x64 `
+            --self-contained true `
+            -p:PublishSingleFile=true `
+            -p:IncludeNativeLibrariesForSelfExtract=true `
+            -p:EnableCompressionInSingleFile=true `
+            -p:Version=$env:VERSION `
+            --output .\bin\cli-publish
+
+      - name: Smoke test sfl (version, zip, unzip with no database)
+        shell: pwsh
+        run: |
+          $sfl = (Resolve-Path .\bin\cli-publish\sfl.exe).Path
+          $reported = (& $sfl --version).Trim()
+          if ($reported -ne $env:VERSION) { throw "sfl --version printed '$reported', expected '$env:VERSION'" }
+
+          # Point the CLI at a database that does not exist: zip and unzip must work without one.
+          $work = Join-Path $env:RUNNER_TEMP 'sfl-smoke'
+          New-Item -ItemType Directory "$work\src\nested" -Force | Out-Null
+          Set-Content "$work\src\a.txt" 'alpha'
+          Set-Content "$work\src\nested\b.txt" 'beta'
+          $env:SFL_DATABASE = "$work\state\never-created.db"
+
+          "Smoke-pass-1`nSmoke-pass-1" | & $sfl zip "$work\src" -o "$work\smoke.zip" --no-color
+          if ($LASTEXITCODE -ne 0) { throw "sfl zip failed with exit code $LASTEXITCODE" }
+
+          "wrong-password" | & $sfl unzip "$work\smoke.zip" -o "$work\bad" --no-color
+          if ($LASTEXITCODE -ne 3) { throw "sfl unzip with a wrong password returned $LASTEXITCODE, expected 3" }
+          if (Test-Path "$work\bad") { throw "a wrong password must extract nothing" }
+
+          "Smoke-pass-1" | & $sfl unzip "$work\smoke.zip" -o "$work\out" --no-color
+          if ($LASTEXITCODE -ne 0) { throw "sfl unzip failed with exit code $LASTEXITCODE" }
+          if ((Get-Content "$work\out\a.txt") -ne 'alpha') { throw 'a.txt did not round-trip' }
+          if ((Get-Content "$work\out\nested\b.txt") -ne 'beta') { throw 'nested\b.txt did not round-trip' }
+          if (Test-Path "$work\state") { throw 'zip/unzip must not create a database' }
+
       - name: Install Inno Setup
         shell: pwsh
         run: choco install innosetup --yes --no-progress
 
-      - name: Build installer
+      - name: Build installers
         shell: pwsh
         run: |
-          & "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe" "/DMyAppVersion=$env:VERSION" .\SecureFolderLocker.iss
-          if ($LASTEXITCODE -ne 0) { throw "Inno Setup failed with exit code $LASTEXITCODE" }
+          $iscc = "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe"
+          & $iscc "/DMyAppVersion=$env:VERSION" .\SecureFolderLocker.iss
+          if ($LASTEXITCODE -ne 0) { throw "Inno Setup failed for SecureFolderLocker.iss with exit code $LASTEXITCODE" }
+          & $iscc "/DMyAppVersion=$env:VERSION" .\sfl.iss
+          if ($LASTEXITCODE -ne 0) { throw "Inno Setup failed for sfl.iss with exit code $LASTEXITCODE" }
 
-      - name: Create checksum
+      - name: Create checksums
         shell: pwsh
         run: |
-          $installer = ".\installer\SecureFolderLockerSetup-$env:VERSION.exe"
-          $hash = (Get-FileHash $installer -Algorithm SHA256).Hash.ToLower()
-          "$hash  $(Split-Path $installer -Leaf)" | Set-Content "$installer.sha256"
+          foreach ($name in "SecureFolderLockerSetup-$env:VERSION.exe", "SfLCliSetup-$env:VERSION.exe") {
+            $installer = ".\installer\$name"
+            $hash = (Get-FileHash $installer -Algorithm SHA256).Hash.ToLower()
+            "$hash  $name" | Set-Content "$installer.sha256"
+          }
 
       - name: Create GitHub Release
         shell: pwsh
@@ -64,6 +116,8 @@ jobs:
             "${{ github.ref_name }}",
             ".\installer\SecureFolderLockerSetup-$env:VERSION.exe",
             ".\installer\SecureFolderLockerSetup-$env:VERSION.exe.sha256",
+            ".\installer\SfLCliSetup-$env:VERSION.exe",
+            ".\installer\SfLCliSetup-$env:VERSION.exe.sha256",
             "--title", "SecureFolderLocker $env:VERSION",
             "--generate-notes"
           )
