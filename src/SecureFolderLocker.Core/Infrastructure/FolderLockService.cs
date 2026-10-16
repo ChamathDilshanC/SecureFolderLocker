@@ -158,6 +158,21 @@ public sealed class FolderLockService
         }
     }
 
+    /// <summary>
+    /// Returns true when the directory carries a deny rule added by this application (full lock or preview).
+    /// </summary>
+    public bool HasOwnedRule(string path)
+    {
+        string directoryPath = ValidateDirectoryPath(path);
+        DirectorySecurity security = new DirectoryInfo(directoryPath).GetAccessControl(AccessControlSections.Access);
+        FileSystemAccessRule fullControlRule = CreateRule(LockedRights);
+        FileSystemAccessRule previewRule = CreateRule(PreviewRights);
+        return security
+            .GetAccessRules(includeExplicit: true, includeInherited: false, typeof(SecurityIdentifier))
+            .Cast<FileSystemAccessRule>()
+            .Any(rule => IsEquivalentRule(rule, fullControlRule) || IsEquivalentRule(rule, previewRule));
+    }
+
     private static FileSystemAccessRule CreateRule(FileSystemRights rights) =>
         new(
             EveryoneSid,

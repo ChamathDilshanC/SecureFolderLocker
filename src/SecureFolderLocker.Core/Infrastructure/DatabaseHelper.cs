@@ -10,21 +10,32 @@ public sealed class DatabaseHelper
     private readonly string _connectionString;
     private readonly object _syncRoot = new();
 
+    /// <summary>
+    /// Opens the per-user database shared by the desktop app and the command-line tool.
+    /// </summary>
     public DatabaseHelper()
+        : this(GetDefaultDatabasePath())
     {
-        string dataDirectory = Path.Combine(
-            Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-            "SecureFolderLocker");
+    }
 
-        Directory.CreateDirectory(dataDirectory);
-        string databasePath = Path.Combine(dataDirectory, "secure-folder-locker.db");
+    public DatabaseHelper(string databasePath)
+    {
+        string fullPath = Path.GetFullPath(databasePath);
+        DataDirectory = Path.GetDirectoryName(fullPath)!;
+        Directory.CreateDirectory(DataDirectory);
         _connectionString = new SqliteConnectionStringBuilder
         {
-            DataSource = databasePath,
+            DataSource = fullPath,
             Mode = SqliteOpenMode.ReadWriteCreate,
             Cache = SqliteCacheMode.Shared
         }.ToString();
     }
+
+    public static string GetDefaultDatabasePath() =>
+        Path.Combine(
+            Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+            "SecureFolderLocker",
+            "secure-folder-locker.db");
 
     public void InitializeDatabase()
     {
@@ -218,7 +229,9 @@ public sealed class DatabaseHelper
         return connection;
     }
 
-    private static string NormalizePath(string path)
+    public string DataDirectory { get; }
+
+    public static string NormalizePath(string path)
     {
         if (string.IsNullOrWhiteSpace(path))
         {
@@ -231,9 +244,11 @@ public sealed class DatabaseHelper
 
     private static void ValidatePassword(string password)
     {
-        if (string.IsNullOrWhiteSpace(password) || password.Length < 8)
+        if (!PasswordPolicy.IsAcceptable(password))
         {
-            throw new ArgumentException("The master password must contain at least 8 characters.", nameof(password));
+            throw new ArgumentException(
+                $"The master password must contain at least {PasswordPolicy.MinimumLength} characters.",
+                nameof(password));
         }
     }
 }

@@ -16,9 +16,11 @@ public sealed class ZipExportService
             throw new ArgumentException("The source folder does not exist.", nameof(sourceFolderPath));
         }
 
-        if (string.IsNullOrWhiteSpace(zipPassword) || zipPassword.Length < 8)
+        if (!PasswordPolicy.IsAcceptable(zipPassword))
         {
-            throw new ArgumentException("The ZIP password must contain at least 8 characters.", nameof(zipPassword));
+            throw new ArgumentException(
+                $"The ZIP password must contain at least {PasswordPolicy.MinimumLength} characters.",
+                nameof(zipPassword));
         }
 
         string sourcePath = Path.GetFullPath(sourceFolderPath)

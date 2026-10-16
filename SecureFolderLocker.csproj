@@ -11,17 +11,19 @@
     <ApplicationIcon>SecureFolderLocker.ico</ApplicationIcon>
     <AssemblyName>SecureFolderLocker</AssemblyName>
     <RootNamespace>SecureFolderLocker</RootNamespace>
+    <!-- The class library, CLI and tests live in subfolders and build as their own projects. -->
+    <DefaultItemExcludes>$(DefaultItemExcludes);src/**;tests/**</DefaultItemExcludes>
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="SharpZipLib" Version="1.4.2" />
     <Resource Include="Logo.png" />
     <Resource Include="LogoMark.png" />
     <Resource Include="SecureFolderLocker.ico" />
     <PackageReference Include="WPF-UI" Version="3.0.5" />
-    <PackageReference Include="Microsoft.Data.Sqlite" Version="8.0.11" />
-    <PackageReference Include="BCrypt.Net-Next" Version="4.0.3" />
-    <PackageReference Include="System.IO.FileSystem.AccessControl" Version="5.0.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="src\SecureFolderLocker.Core\SecureFolderLocker.Core.csproj" />
   </ItemGroup>
 
 </Project>

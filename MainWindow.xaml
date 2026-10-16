@@ -220,7 +220,7 @@
                                                     <Border Style="{StaticResource StatusPillStyle}">
                                                         <TextBlock FontSize="12" Foreground="{DynamicResource TextFillColorPrimaryBrush}" Text="{Binding StatusText}" />
                                                     </Border>
-                                                    <Border Style="{StaticResource StatusPillStyle}" Visibility="{Binding IsHidden, Converter={StaticResource BooleanToVisibilityConverter}}">
+                                                    <Border Style="{StaticResource StatusPillStyle}" Visibility="{Binding IsCurrentlyHidden, Converter={StaticResource BooleanToVisibilityConverter}}">
                                                         <StackPanel Orientation="Horizontal">
                                                             <ui:SymbolIcon Margin="0,0,4,0" FontSize="12" Foreground="{DynamicResource TextFillColorPrimaryBrush}" Symbol="EyeOff24" />
                                                             <TextBlock FontSize="12" Foreground="{DynamicResource TextFillColorPrimaryBrush}" Text="Hidden" />
