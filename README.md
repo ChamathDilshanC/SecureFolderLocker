@@ -194,8 +194,8 @@ The solution has four projects: the WPF app, the shared `SecureFolderLocker.Core
 Pushing a version tag runs the tests, builds both installers, and publishes a GitHub Release automatically:
 
 ```powershell
-git tag v1.0.1
-git push origin v1.0.1
+git tag v1.1.0
+git push origin v1.1.0
 ```
 
 ## Status

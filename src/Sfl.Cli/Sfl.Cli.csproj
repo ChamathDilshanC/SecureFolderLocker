@@ -9,7 +9,7 @@
     <RootNamespace>Sfl.Cli</RootNamespace>
     <ApplicationManifest>sfl.manifest</ApplicationManifest>
     <ApplicationIcon>..\..\SecureFolderLocker.ico</ApplicationIcon>
-    <Version>1.0.1</Version>
+    <Version>1.1.0</Version>
     <Product>Secure Folder Locker CLI</Product>
     <Company>ChamathDilshanC</Company>
     <IncludeSourceRevisionInInformationalVersion>false</IncludeSourceRevisionInInformationalVersion>
