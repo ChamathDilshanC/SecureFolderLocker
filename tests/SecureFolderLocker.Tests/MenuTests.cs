@@ -9,7 +9,7 @@ namespace SecureFolderLocker.Tests;
 
 public sealed class MenuTests : IDisposable
 {
-    private const string Master = "master-pass-1";
+    private static readonly string Master = TestPasswords.Master;
     private readonly TestWorkspace _workspace = new();
 
     public void Dispose() => _workspace.Dispose();
@@ -344,7 +344,7 @@ public sealed class MenuTests : IDisposable
         string start = _workspace.CreateFolder("downloads");
         string zip = Path.Combine(start, "taxes.zip");
         string source = _workspace.CreateFolder("to zip", ("a.txt", "hello"));
-        await new ZipExportService().ExportToSecureZipAsync(source, zip, "zip-pass-123");
+        await new ZipExportService().ExportToSecureZipAsync(source, zip, TestPasswords.Zip);
 
         // Zip mode lists: 0 Type a path, 1 Up, 2 Other drive, 3 taxes.zip, 4 Back.
         CliResult result = await CliRunner.RunAsync(
@@ -360,7 +360,7 @@ public sealed class MenuTests : IDisposable
                     console.Input.PushKey(ConsoleKey.Enter);    // extract to: default (empty)
                     PressAnyKeyThenExit(console);
                 },
-                new FakePasswordPrompt("zip-pass-123"),
+                new FakePasswordPrompt(TestPasswords.Zip),
                 workingDirectory: start));
 
         Assert.True(result.ExitCode == 0, result.AllOutput);

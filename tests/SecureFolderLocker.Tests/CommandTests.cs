@@ -5,7 +5,7 @@ namespace SecureFolderLocker.Tests;
 
 public sealed class CommandTests : IDisposable
 {
-    private const string Master = "master-pass-1";
+    private static readonly string Master = TestPasswords.Master;
     private readonly TestWorkspace _workspace = new();
 
     public void Dispose() => _workspace.Dispose();
@@ -36,7 +36,7 @@ public sealed class CommandTests : IDisposable
     {
         GivenMasterPassword();
 
-        CliResult result = await RunAsync(["init"], new FakePasswordPrompt("another-pass-2", "another-pass-2"));
+        CliResult result = await RunAsync(["init"], new FakePasswordPrompt(TestPasswords.Second, TestPasswords.Second));
 
         Assert.Equal((int)ExitCode.StateConflict, result.ExitCode);
         Assert.Contains("password change", result.Stderr);
@@ -50,7 +50,7 @@ public sealed class CommandTests : IDisposable
         Assert.Equal((int)ExitCode.Failure, shortPassword.ExitCode);
         Assert.False(_workspace.Database.HasMasterPassword());
 
-        CliResult mismatch = await RunAsync(["init"], new FakePasswordPrompt("first-pass-1", "second-pass-2"));
+        CliResult mismatch = await RunAsync(["init"], new FakePasswordPrompt(TestPasswords.First, TestPasswords.Second));
         Assert.Equal((int)ExitCode.Failure, mismatch.ExitCode);
         Assert.False(_workspace.Database.HasMasterPassword());
     }
@@ -187,12 +187,12 @@ public sealed class CommandTests : IDisposable
         _workspace.Protection.Lock(folder, hideFolder: false);
 
         CliResult result = await RunAsync(
-            ["unlock", folder], new FakePasswordPrompt("wrong-pass-9"), new StubAdminGate(allow: true));
+            ["unlock", folder], new FakePasswordPrompt(TestPasswords.Wrong), new StubAdminGate(allow: true));
 
         Assert.Equal((int)ExitCode.AuthenticationFailed, result.ExitCode);
         Assert.True(_workspace.Locks.HasOwnedRule(folder));
         Assert.Single(_workspace.Protection.List());
-        Assert.DoesNotContain("wrong-pass-9", result.AllOutput);
+        Assert.DoesNotContain(TestPasswords.Wrong, result.AllOutput);
     }
 
     [Fact]
@@ -241,7 +241,7 @@ public sealed class CommandTests : IDisposable
         GivenMasterPassword();
         string folder = _workspace.CreateFolder("a");
         _workspace.Protection.Lock(folder, hideFolder: false);
-        FakePasswordPrompt prompt = new("nope-nope-1", Master);
+        FakePasswordPrompt prompt = new(TestPasswords.Wrong, Master);
 
         CliResult result = await RunAsync(
             ["unlock", folder], prompt, new StubAdminGate(allow: true), interactive: () => true);
@@ -403,7 +403,7 @@ public sealed class CommandTests : IDisposable
     public async Task PasswordChange_ReplacesTheMasterPassword()
     {
         GivenMasterPassword();
-        const string newPassword = "brand-new-pass-7";
+        string newPassword = TestPasswords.NewMaster;
 
         CliResult result = await RunAsync(
             ["password", "change"], new FakePasswordPrompt(Master, newPassword, newPassword));
@@ -420,7 +420,7 @@ public sealed class CommandTests : IDisposable
     {
         GivenMasterPassword();
 
-        CliResult result = await RunAsync(["password", "change"], new FakePasswordPrompt("not-current-1"));
+        CliResult result = await RunAsync(["password", "change"], new FakePasswordPrompt(TestPasswords.Wrong));
 
         Assert.Equal((int)ExitCode.AuthenticationFailed, result.ExitCode);
         Assert.True(_workspace.Database.VerifyMasterPassword(Master));

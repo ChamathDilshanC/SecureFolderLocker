@@ -7,7 +7,7 @@ namespace SecureFolderLocker.Tests;
 
 public sealed class PreviewTests : IDisposable
 {
-    private const string Master = "master-pass-1";
+    private static readonly string Master = TestPasswords.Master;
     private readonly TestWorkspace _workspace = new();
 
     public void Dispose() => _workspace.Dispose();
@@ -242,7 +242,7 @@ public sealed class PreviewTests : IDisposable
         string folder = GivenLockedFolder();
         FakePreviewHost host = new();
 
-        CliResult result = await PreviewAsync(folder, host, "wrong-pass-1");
+        CliResult result = await PreviewAsync(folder, host, TestPasswords.Wrong);
 
         Assert.Equal((int)ExitCode.AuthenticationFailed, result.ExitCode);
         Assert.Empty(host.Opened);

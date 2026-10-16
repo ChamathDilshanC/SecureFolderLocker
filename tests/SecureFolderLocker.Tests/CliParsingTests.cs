@@ -139,7 +139,7 @@ public sealed class CliParsingTests : IDisposable
     [Fact]
     public async Task Status_ReportsPasswordAndFolderCounts()
     {
-        _workspace.Database.SetMasterPassword("master-password");
+        _workspace.Database.SetMasterPassword(TestPasswords.Master);
         string folder = _workspace.CreateFolder("a");
         _workspace.Protection.Lock(folder, hideFolder: false);
 
@@ -154,7 +154,7 @@ public sealed class CliParsingTests : IDisposable
     [Fact]
     public async Task Quiet_StillPrintsTheCommandResult()
     {
-        _workspace.Database.SetMasterPassword("master-password");
+        _workspace.Database.SetMasterPassword(TestPasswords.Master);
 
         CliResult result = await CliRunner.RunAsync(_workspace, ["status", "--quiet"]);
 

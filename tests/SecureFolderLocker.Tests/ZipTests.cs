@@ -6,7 +6,7 @@ namespace SecureFolderLocker.Tests;
 
 public sealed class ZipTests : IDisposable
 {
-    private const string ZipPassword = "zip-pass-123";
+    private static readonly string ZipPassword = TestPasswords.Zip;
     private readonly TestWorkspace _workspace = new();
 
     public void Dispose() => _workspace.Dispose();
@@ -77,12 +77,12 @@ public sealed class ZipTests : IDisposable
         string destination = Path.Combine(_workspace.Root, "wrong");
 
         CliResult result = await CliRunner.RunAsync(
-            ["unzip", zip, "-o", destination], NoDatabase, new FakePasswordPrompt("not-the-password"));
+            ["unzip", zip, "-o", destination], NoDatabase, new FakePasswordPrompt(TestPasswords.Wrong));
 
         Assert.Equal((int)ExitCode.AuthenticationFailed, result.ExitCode);
         Assert.Contains("Wrong ZIP password", result.Stderr);
         Assert.False(Directory.Exists(destination));
-        Assert.DoesNotContain("not-the-password", result.AllOutput);
+        Assert.DoesNotContain(TestPasswords.Wrong, result.AllOutput);
         Assert.DoesNotContain(ZipPassword, result.AllOutput);
     }
 
@@ -104,7 +104,7 @@ public sealed class ZipTests : IDisposable
     {
         string zip = await ZipWithCliAsync(CreateSourceFolder(), NoDatabase);
         string destination = Path.Combine(_workspace.Root, "third-time");
-        FakePasswordPrompt prompt = new("bad-one-1", "bad-two-2", ZipPassword);
+        FakePasswordPrompt prompt = new(TestPasswords.Wrong, TestPasswords.Wrong, ZipPassword);
 
         CliResult result = await CliRunner.RunAsync(
             ["unzip", zip, "-o", destination], NoDatabase, prompt, isInteractive: () => true);
@@ -119,7 +119,7 @@ public sealed class ZipTests : IDisposable
     {
         string zip = await ZipWithCliAsync(CreateSourceFolder(), NoDatabase);
         string destination = Path.Combine(_workspace.Root, "never");
-        FakePasswordPrompt prompt = new("bad-one-1", "bad-two-2", "bad-three-3");
+        FakePasswordPrompt prompt = new(TestPasswords.Wrong, TestPasswords.Wrong, TestPasswords.Wrong);
 
         CliResult result = await CliRunner.RunAsync(
             ["unzip", zip, "-o", destination], NoDatabase, prompt, isInteractive: () => true);
@@ -373,7 +373,7 @@ public sealed class ZipTests : IDisposable
     public async Task Zip_HasNoPasswordFlag()
     {
         CliResult result = await CliRunner.RunAsync(
-            ["zip", CreateSourceFolder(), "-o", Path.Combine(_workspace.Root, "x.zip"), "--password", "secret-value"],
+            ["zip", CreateSourceFolder(), "-o", Path.Combine(_workspace.Root, "x.zip"), "--password", TestPasswords.Plain],
             NoDatabase);
 
         Assert.Equal((int)ExitCode.Usage, result.ExitCode);
@@ -401,7 +401,7 @@ public sealed class ZipTests : IDisposable
         CliResult result = await CliRunner.RunAsync(
             ["zip", CreateSourceFolder(), "-o", zip],
             NoDatabase,
-            new FakePasswordPrompt("first-password", "second-password"));
+            new FakePasswordPrompt(TestPasswords.First, TestPasswords.Second));
 
         Assert.Equal((int)ExitCode.Failure, result.ExitCode);
         Assert.Contains("do not match", result.Stderr);
@@ -416,7 +416,7 @@ public sealed class ZipTests : IDisposable
         CliResult result = await CliRunner.RunAsync(
             ["zip", CreateSourceFolder(), "-o", zip],
             NoDatabase,
-            new FakePasswordPrompt("first-password", "second-password", ZipPassword, ZipPassword),
+            new FakePasswordPrompt(TestPasswords.First, TestPasswords.Second, ZipPassword, ZipPassword),
             isInteractive: () => true);
 
         Assert.Equal(0, result.ExitCode);
@@ -476,7 +476,7 @@ public sealed class ZipTests : IDisposable
     public async Task Zip_OfALockedFolder_NeedsAdministratorAndAsksBeforeAnyPassword()
     {
         string source = CreateSourceFolder();
-        _workspace.Database.SetMasterPassword("master-password");
+        _workspace.Database.SetMasterPassword(TestPasswords.Master);
         _workspace.Protection.Lock(source, hideFolder: false);
         FakePasswordPrompt prompt = new(ZipPassword, ZipPassword);
         StubAdminGate gate = new(allow: false);
@@ -495,14 +495,14 @@ public sealed class ZipTests : IDisposable
     public async Task Zip_OfALockedFolder_WithAdminRights_ExportsThenLocksItAgain()
     {
         string source = CreateSourceFolder();
-        _workspace.Database.SetMasterPassword("master-password");
+        _workspace.Database.SetMasterPassword(TestPasswords.Master);
         _workspace.Protection.Lock(source, hideFolder: true);
         string zip = Path.Combine(_workspace.Root, "locked.zip");
 
         CliResult result = await CliRunner.RunAsync(
             ["zip", source, "-o", zip],
             _workspace.DatabasePath,
-            new FakePasswordPrompt("master-password", ZipPassword, ZipPassword),
+            new FakePasswordPrompt(TestPasswords.Master, ZipPassword, ZipPassword),
             new StubAdminGate(allow: true));
 
         Assert.True(result.ExitCode == 0, result.AllOutput);

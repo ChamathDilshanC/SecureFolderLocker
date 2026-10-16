@@ -233,7 +233,7 @@ public sealed class ElevationTests : IDisposable
 
     private Task<CliResult> RunLockAsync(CliRunSetup setup, params string[] extraArgs)
     {
-        _workspace.Database.SetMasterPassword("master-pass-1");
+        _workspace.Database.SetMasterPassword(TestPasswords.Master);
         string folder = _workspace.CreateFolder("target folder");
         return CliRunner.RunAsync(["lock", folder, .. extraArgs], _workspace.DatabasePath, setup);
     }
@@ -313,7 +313,7 @@ public sealed class ElevationTests : IDisposable
         // The elevated copy is pointed at the same database, even if UAC runs it as another account.
         Assert.Equal("--sfl-db", childArguments[^4]);
         Assert.Equal(_workspace.DatabasePath, childArguments[^3]);
-        Assert.DoesNotContain("master-pass-1", arguments);
+        Assert.DoesNotContain(TestPasswords.Master, arguments);
 
         // The result shows in the console the command was typed in.
         Assert.Contains("Locked in the admin window", result.Stdout);
@@ -421,7 +421,7 @@ public sealed class ElevationTests : IDisposable
     [Fact]
     public async Task Gate_AppliesToEveryCommandThatChangesAcls()
     {
-        _workspace.Database.SetMasterPassword("master-pass-1");
+        _workspace.Database.SetMasterPassword(TestPasswords.Master);
         string folder = _workspace.CreateFolder("locked folder");
         _workspace.Protection.Lock(folder, hideFolder: false);
         FakeLauncher launcher = new(child: _ => Task.FromResult(0));

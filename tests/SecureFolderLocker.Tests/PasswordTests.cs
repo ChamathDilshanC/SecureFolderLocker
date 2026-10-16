@@ -19,18 +19,18 @@ public sealed class PasswordTests : IDisposable
     [Fact]
     public void VerifyMasterPassword_AcceptsCorrectAndRejectsWrongPassword()
     {
-        _workspace.Database.SetMasterPassword("correct horse battery");
+        _workspace.Database.SetMasterPassword(TestPasswords.Second);
 
         Assert.True(_workspace.Database.HasMasterPassword());
-        Assert.True(_workspace.Database.VerifyMasterPassword("correct horse battery"));
-        Assert.False(_workspace.Database.VerifyMasterPassword("correct horse batterY"));
+        Assert.True(_workspace.Database.VerifyMasterPassword(TestPasswords.Second));
+        Assert.False(_workspace.Database.VerifyMasterPassword(TestPasswords.Second.ToUpperInvariant()));
         Assert.False(_workspace.Database.VerifyMasterPassword(""));
     }
 
     [Fact]
     public void SetMasterPassword_StoresOnlyABcryptHash()
     {
-        const string password = "plaintext-must-not-appear";
+        string password = TestPasswords.Plain;
         _workspace.Database.SetMasterPassword(password);
 
         using SqliteConnection connection = new($"Data Source={_workspace.DatabasePath};Mode=ReadOnly");
@@ -53,8 +53,8 @@ public sealed class PasswordTests : IDisposable
     [Fact]
     public void SetMasterPassword_SamePasswordProducesDifferentHashes()
     {
-        string first = ReadHashAfterSetting("same-password-1");
-        string second = ReadHashAfterSetting("same-password-1");
+        string first = ReadHashAfterSetting(TestPasswords.First);
+        string second = ReadHashAfterSetting(TestPasswords.First);
 
         Assert.NotEqual(first, second);
     }
@@ -62,11 +62,11 @@ public sealed class PasswordTests : IDisposable
     [Fact]
     public void SetMasterPassword_ChangesThePassword()
     {
-        _workspace.Database.SetMasterPassword("first-password");
-        _workspace.Database.SetMasterPassword("second-password");
+        _workspace.Database.SetMasterPassword(TestPasswords.First);
+        _workspace.Database.SetMasterPassword(TestPasswords.Second);
 
-        Assert.False(_workspace.Database.VerifyMasterPassword("first-password"));
-        Assert.True(_workspace.Database.VerifyMasterPassword("second-password"));
+        Assert.False(_workspace.Database.VerifyMasterPassword(TestPasswords.First));
+        Assert.True(_workspace.Database.VerifyMasterPassword(TestPasswords.Second));
     }
 
     [Theory]
